@@ -28,11 +28,21 @@ var grays = []tcell.Style{
 	tcell.StyleDefault.Background(tcell.ColorBlack.TrueColor()).Foreground(tcell.ColorSlateGray),
 }
 
+var bgGreen = tcell.NewRGBColor(0, 19, 9)
+var flashGreen = tcell.NewRGBColor(0, 45, 37)
+
+var greens = []tcell.Style{
+	tcell.StyleDefault.Background(bgGreen).Foreground(tcell.ColorForestGreen),
+	tcell.StyleDefault.Background(bgGreen).Foreground(tcell.ColorGreenYellow),
+	tcell.StyleDefault.Background(bgGreen).Foreground(tcell.ColorLightSeaGreen),
+	tcell.StyleDefault.Background(bgGreen).Foreground(tcell.ColorLimeGreen),
+}
+
 var (
 	empt        = []rune{}
 	flickerbias = 0
 	flickerlast = 0
-	pollRate    = 54 * time.Millisecond
+	pollRate    = 45 * time.Millisecond
 	paused      = false
 )
 
@@ -62,6 +72,7 @@ func main() {
 	scr.Clear()
 
 	chartab := initCharTab()
+	coords := getCoords("nult.txt", minX, minY)
 
 	quit := make(chan struct{})
 	go func() {
@@ -99,7 +110,7 @@ renderloop:
 		case <-time.After(pollRate):
 			if !paused {
 				filltab(chartab)
-				drawtab(scr, chartab)
+				drawtab(scr, chartab, coords)
 			}
 		}
 
@@ -109,13 +120,33 @@ renderloop:
 	scr.Fini()
 }
 
-func drawtab(scr tcell.Screen, ct []char_t) {
+func drawtab(scr tcell.Screen, ct []char_t, coords coordmap) {
 	i := 0
 	for x := 0; x < minX; x++ {
 		for y := 0; y < minY; y++ {
-			scr.SetContent(
-				x, y, ct[i].r, empt, ct[i].sty,
-			)
+			c := coord{x: x, y: y}
+			if _, ok := coords[c]; ok {
+				n := rand.Intn(len(greens))
+				sty := greens[n]
+				if ct[i].r != spc {
+					sty = greens[n].Background(flashGreen)
+				}
+
+				r := ct[i].r
+				if n < 2 {
+					r = '|'
+				}
+
+				scr.SetContent(
+					x, y, r, empt, sty,
+				)
+
+			} else {
+				scr.SetContent(
+					x, y, ct[i].r, empt, ct[i].sty,
+				)
+			}
+
 			i++
 		}
 	}
